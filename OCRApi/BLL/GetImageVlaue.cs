@@ -42,11 +42,13 @@ namespace OCRApi.BLL
         }
         #endregion
 
-        public Dictionary<int, OCRResult> getString(string path)
+        public Dictionary<int, OCRResult> getString(string path, int RegRegionMode)
         {
             string value = "test";
             object o_config = "allConfig";
             string OCRImagePath = LoadedImagePath + path;
+            Dictionary<int, OCRResult> returnValue = new Dictionary<int, OCRResult>();
+            List<RECT> lRecognizeRect = new List<RECT>();
 
             #region -- config & PPOCRResult init --
             RecognizeSetting config = new RecognizeSetting();
@@ -78,6 +80,8 @@ namespace OCRApi.BLL
             RECT RecognizeRect;
             //RECT RecognizeRect;
 
+            config.RegRegionMode = RegRegionMode;
+
             //bool DrawRecognizePathAgain = false;
             if (config.RegRegionMode == 1)
             {
@@ -88,20 +92,35 @@ namespace OCRApi.BLL
                 //}
                 //else
                 //{
-                    IsPartialRecognize = true;
 
-                    //double XRatio;
-                    //double YRatio;
-                    //XRatio = LoadedImageWidth / ImgDisplay.ActualWidth;
-                    //YRatio = LoadedImageHeight / ImgDisplay.ActualHeight;
-                    //XRatio = 0.0;
-                    //YRatio = 0.0;
+                #region -- create rect list --
+                // 委託人 TeddyYin
+                RecognizeRect = new RECT(164, 156, 570, 214);
+                lRecognizeRect.Add(RecognizeRect);
 
-                    //RectangleGeometry tmpRect = (RectangleGeometry)RecognizePath.Data;
+                // 名稱 TEST NAME
+                RecognizeRect = new RECT(166, 511, 434, 549);
+                lRecognizeRect.Add(RecognizeRect);
 
-                    //RecognizeRect = new RECT((int)(tmpRect.Rect.Left * XRatio), (int)(tmpRect.Rect.Top * YRatio),
-                    //                        (int)(tmpRect.Rect.Right * XRatio), (int)(tmpRect.Rect.Bottom * YRatio));
-                    RecognizeRect = new RECT(0, 0, 0, 0);
+                // 帳號 123456789
+                RecognizeRect = new RECT(533, 510, 762, 549);
+                lRecognizeRect.Add(RecognizeRect);
+                #endregion
+
+                IsPartialRecognize = true;
+
+                //double XRatio;
+                //double YRatio;
+                //XRatio = LoadedImageWidth / ImgDisplay.ActualWidth;
+                //YRatio = LoadedImageHeight / ImgDisplay.ActualHeight;
+                //XRatio = 0.0;
+                //YRatio = 0.0;
+
+                //RectangleGeometry tmpRect = (RectangleGeometry)RecognizePath.Data;
+
+                //RecognizeRect = new RECT((int)(tmpRect.Rect.Left * XRatio), (int)(tmpRect.Rect.Top * YRatio),
+                //                        (int)(tmpRect.Rect.Right * XRatio), (int)(tmpRect.Rect.Bottom * YRatio));
+                RecognizeRect = new RECT(0, 0, 0, 0);
 
                 //}
 
@@ -111,6 +130,7 @@ namespace OCRApi.BLL
             else
             {
                 RecognizeRect = new RECT(0, 0, 0, 0);
+                lRecognizeRect.Add(RecognizeRect);
             }
 
             string FilePath = OCRImagePath;
@@ -140,36 +160,60 @@ namespace OCRApi.BLL
             //    return;
             //}
 
-            RecognizeParameter param = new RecognizeParameter();
-            param.FilePath = FilePath;
-            param.RecognizeMode = pRecognizeMode;
-            param.IsPartialRecognize = IsPartialRecognize;
-            param.RecognizeRect = RecognizeRect;
-            param.UseRecogAS = true;
+            int dictionaryKey = 0;
 
-            RecognizeResult result = new RecognizeResult();
-            result = IdentifyImage(param);
-            //RecognizeWorker.RunWorkerAsync(param);
-
-            Dictionary<int, OCRResult> returnValue = new Dictionary<int, OCRResult>();
-
-            if (result.pResultCode == PPOCRCode.Success)
+            foreach (RECT rect in lRecognizeRect)
             {
-                for (int i = 0; i < result.pResultList.Count(); i++)
+                IsPartialRecognize = true;
+
+                RecognizeParameter param = new RecognizeParameter();
+                param.FilePath = FilePath;
+                param.RecognizeMode = pRecognizeMode;
+                param.IsPartialRecognize = IsPartialRecognize;
+                param.RecognizeRect = rect;
+                param.UseRecogAS = true;
+
+                RecognizeResult result = new RecognizeResult();
+                result = IdentifyImage(param);
+                //RecognizeWorker.RunWorkerAsync(param);
+
+                if (result.pResultCode == PPOCRCode.Success)
                 {
-                    PPOCRResult oPPOCRResult = new PPOCRResult();
-                    OCRResult oOCRResult = new OCRResult();
+                    foreach(PPOCRResult PPOCRtemp in result.pResultList)
+                    {
+                        PPOCRResult oPPOCRResult = new PPOCRResult();
+                        OCRResult oOCRResult = new OCRResult();
 
-                    oPPOCRResult = result.pResultList[i];
+                        oPPOCRResult = PPOCRtemp;
 
-                    oOCRResult.top = oPPOCRResult.top;
-                    oOCRResult.bottom = oPPOCRResult.bottom;
-                    oOCRResult.left = oPPOCRResult.left;
-                    oOCRResult.right = oPPOCRResult.right;
-                    oOCRResult.RecognizedString = oPPOCRResult.RecognizedString;
-                    oOCRResult.PPCharList = oPPOCRResult.PPCharList;
+                        oOCRResult.top = oPPOCRResult.top;
+                        oOCRResult.bottom = oPPOCRResult.bottom;
+                        oOCRResult.left = oPPOCRResult.left;
+                        oOCRResult.right = oPPOCRResult.right;
+                        oOCRResult.RecognizedString = oPPOCRResult.RecognizedString.Trim();
+                        oOCRResult.PPCharList = oPPOCRResult.PPCharList;
 
-                    returnValue.Add(i, oOCRResult);
+                        returnValue.Add(dictionaryKey, oOCRResult);
+
+                        dictionaryKey++;
+                    }
+
+                    //for (int i = 0; i < result.pResultList.Count(); i++)
+                    //{
+                    //    PPOCRResult oPPOCRResult = new PPOCRResult();
+                    //    OCRResult oOCRResult = new OCRResult();
+
+                    //    oPPOCRResult = result.pResultList[i];
+
+                    //    oOCRResult.top = oPPOCRResult.top;
+                    //    oOCRResult.bottom = oPPOCRResult.bottom;
+                    //    oOCRResult.left = oPPOCRResult.left;
+                    //    oOCRResult.right = oPPOCRResult.right;
+                    //    oOCRResult.RecognizedString = oPPOCRResult.RecognizedString;
+                    //    oOCRResult.PPCharList = oPPOCRResult.PPCharList;
+
+                    //    returnValue.Add(i, oOCRResult);
+                    //}
                 }
             }
 
@@ -180,6 +224,20 @@ namespace OCRApi.BLL
         private int GetRecogSetting()
         {
             RecognizeSetting config = new RecognizeSetting();
+
+            #region -- config & PPOCRResult init --
+            config.CHConvert = false;
+            config.RecogAuto = false;
+            config.RecogHEX = false;
+            config.RecogSChar = false;
+            config.RecogHChar = false;
+            config.RecogKChar = false;
+
+            config.RegWndLang = (int)PPI18N.Lang.zhTW;
+
+            config.RegRegionMode = 0;
+            #endregion
+
             int pRecognizeMode = 0;
 
             switch (config.RecogLang)
@@ -324,10 +382,7 @@ namespace OCRApi.BLL
             result.pResultCode = ret;
             result.pResultList = pResultList;
 
-            int aaa = 0;
-
             return result;
-            //e.Result = result;
         }
         #endregion
 

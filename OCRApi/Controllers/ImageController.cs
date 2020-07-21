@@ -12,7 +12,7 @@ namespace OCRApi.Controllers
     public class ImageController : ApiController
     {
         // GET api/values/5
-        public string Get(string value)
+        public string Get(string value, int RegRegionMode)
         {
             GetImageVlaue getImage = new GetImageVlaue();
             Dictionary<int, OCRResult> result = new Dictionary<int, OCRResult>();
@@ -21,7 +21,7 @@ namespace OCRApi.Controllers
 
             try
             {
-                result = getImage.getString(value);
+                result = getImage.getString(value, RegRegionMode);
 
                 if (result.Count > 0)
                 {
