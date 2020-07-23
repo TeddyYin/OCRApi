@@ -164,7 +164,7 @@ namespace OCRApi.BLL
 
             foreach (RECT rect in lRecognizeRect)
             {
-                IsPartialRecognize = true;
+                //IsPartialRecognize = true;
 
                 RecognizeParameter param = new RecognizeParameter();
                 param.FilePath = FilePath;
